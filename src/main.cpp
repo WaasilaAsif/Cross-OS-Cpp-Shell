@@ -1,7 +1,7 @@
 #include<iostream>
 #include <string>
 #include <vector>
-#include <cstring>;
+#include <cstring>
 #include <sys/types.h> // Defines pid_t
 //#include <unistd.h>    // Defines fork() and execvp()
 #if defined(_WIN32)
@@ -19,7 +19,7 @@ void lsh_loop();
 int lsh_cd (vector <string>& args);
 int lsh_help (vector <string>& args);
 int lsh_exit (vector <string>& args);
-vector<string> builtin_str = {
+string builtin_str[] = {
     "cd",
     "help",
     "exit"
@@ -30,11 +30,11 @@ int (*builtin_func[])(vector<string> &args) = {
     &lsh_exit
 };
 int lsh_num_builtins(){
-    return sizeof(builtin_str);
+    return (size(builtin_str));
 }
 string lsh_read_line();
 vector <string> lsh_split_line(string line);
-bool lsh_execute(vector<string> args);
+int lsh_execute(vector<string> args);
 int main(int argc, char **argv){
 
     lsh_loop();
@@ -102,7 +102,7 @@ vector <string> lsh_split_line(string line) {
     return tokens;
 }
 
-int lsh_launch(vector<string> args){
+int lsh_launch(const vector<string> args){
     vector<char*> c_args;
     for (const auto& arg : args) {
         c_args.push_back(const_cast<char*>(arg.c_str()));
@@ -118,12 +118,12 @@ int lsh_launch(vector<string> args){
    
 #endif
 }
-int lsh_cd(vector<string> args){
-    if (args[1].data() == NULL) {
+int lsh_cd(vector<string> &args){
+    if (args.size()<2) {
         cout<<"lsh: expected an argument to the cd command, Need an argument to move to the directory required"<<endl;
 
     } else{
-        if (_chdir((args[1]).c_str()) != 0){
+        if (_chdir(args[1].c_str()) != 0){
             perror("lsh");
 
         }
@@ -132,7 +132,7 @@ int lsh_cd(vector<string> args){
     return 1;
 }
 
-int lsh_help(vector<string> args){
+int lsh_help(vector<string> &args){
     int i;
     cout<<"My implementation of LSH inspired by Stepher Brennan's implementation"<<endl;
     cout<<"Most of the stuff online was in C and was only for Unix like systems. As like most people I starred coding from windows I wanted to make a cross OS shell"<<endl;
@@ -147,7 +147,20 @@ int lsh_help(vector<string> args){
   return 1;
    
 }
-int lsh_exit(vector<string> args)
+int lsh_exit(vector<string> &args)
 {
   return 0;
+}
+int lsh_execute(vector<string> args){
+    
+    if (args.size()<1){
+        return 1;
+    }
+    for (int i = 0; i < lsh_num_builtins() ; i++ ){
+        
+        if(args[0].compare(builtin_str[i]) == 0 ){
+            return (*builtin_func[i])(args);
+        }
+    }
+    return lsh_launch(args);
 }
