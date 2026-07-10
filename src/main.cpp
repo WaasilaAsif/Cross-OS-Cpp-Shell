@@ -3,8 +3,9 @@
 #include <vector>
 #include <cstring>;
 #include <sys/types.h> // Defines pid_t
-#include <unistd.h>    // Defines fork() and execvp()
+//#include <unistd.h>    // Defines fork() and execvp()
 #if defined(_WIN32)
+#include <io.h>
 #include <process.h>
 #else
 #include <sys/types.h> // Defines pid_t
@@ -84,11 +85,18 @@ vector <string> lsh_split_line(string line) {
 }
 
 int lsh_launch(vector<string> args){
-    pid_t pid, wpid;
-    int status;
-    pid = fork();
-    if (pid == 0){
-        //Child process is running
-        
+    vector<char*> c_args;
+    for (const auto& arg : args) {
+        c_args.push_back(const_cast<char*>(arg.c_str()));
     }
+    c_args.push_back(nullptr);
+  #if defined(_WIN32)
+    intptr_t status = _spawnvp(_P_WAIT, c_args[0], c_args.data());
+    if (status == -1) {
+        perror("lsh error");
+    }
+    return 1;
+#else
+   
+#endif
 }
