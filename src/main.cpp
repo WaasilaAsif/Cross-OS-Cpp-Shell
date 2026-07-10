@@ -21,15 +21,21 @@ void lsh_loop();
 int lsh_cd (vector <string>& args);
 int lsh_help (vector <string>& args);
 int lsh_exit (vector <string>& args);
+int lsh_cwd (vector <string>& args);
+int lsh_man (vector <string>& args);
 string builtin_str[] = {
     "cd",
     "help",
-    "exit"
+    "exit",
+    "cwd",
+    "man"
 };
 int (*builtin_func[])(vector<string> &args) = {
     &lsh_cd,
     &lsh_help,
-    &lsh_exit
+    &lsh_exit,
+    &lsh_cwd
+    
 };
 int lsh_num_builtins(){
     return (size(builtin_str));
@@ -127,7 +133,14 @@ int lsh_cd(vector<string> &args){
         cout<<"lsh: expected an argument to the cd command, Need an argument to move to the directory required"<<endl;
 
     } else{
-        
+        if (args[1] == ".."){
+            cout<<"Moving back in directory";
+            fs::path cwd = fs::current_path();
+            string path = cwd.string();
+            string ncwd;
+            int pos = path.find_last_of('\\');
+            ncwd = path.substr(0,pos);
+        }
         cout << "Moving to directory \t"<<args[1]<<endl;
         if (_chdir(args[1].c_str()) != 0){
             perror("lsh");
@@ -175,4 +188,20 @@ int lsh_execute(vector<string> args){
         }
     }
     return lsh_launch(args);
+}
+
+int lsh_cwd(vector<string> &args){
+    
+try {
+    
+        fs::path current_dir = fs::current_path();
+        std::cout << "Current working directory: " << current_dir << std::endl;
+    } catch (const fs::filesystem_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+    return 1;
+}
+
+int lsh_man (vector<string> * args){
+    
 }
