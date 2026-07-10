@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include <filesystem>
 #include <sys/types.h> // Defines pid_t
 //#include <unistd.h>    // Defines fork() and execvp()
 #if defined(_WIN32)
@@ -15,6 +16,7 @@
 #endif
 
 using namespace std;
+namespace fs = filesystem;
 void lsh_loop();
 int lsh_cd (vector <string>& args);
 int lsh_help (vector <string>& args);
@@ -42,7 +44,7 @@ int main(int argc, char **argv){
     return EXIT_SUCCESS;
 }
 void lsh_loop(){
-     string line;
+    string line;
     vector <string> args;
     int status;
 
@@ -55,12 +57,14 @@ void lsh_loop(){
     while (status);
 };
 string lsh_read_line(){
-    string line = "";
-    getline(cin, line);
+    string line;
+   
     if (!getline (cin , line)){
     if(cin.eof()){
-        exit (EXIT_SUCCESS);
 
+        //return line;
+        exit (EXIT_SUCCESS);
+        
     }
     else {
         perror("lsh: read line error");
@@ -123,11 +127,19 @@ int lsh_cd(vector<string> &args){
         cout<<"lsh: expected an argument to the cd command, Need an argument to move to the directory required"<<endl;
 
     } else{
+        
+        cout << "Moving to directory \t"<<args[1]<<endl;
         if (_chdir(args[1].c_str()) != 0){
             perror("lsh");
-
         }
-
+       
+    }
+try {
+    
+        fs::path current_dir = fs::current_path();
+        std::cout << "Current working directory: " << current_dir << std::endl;
+    } catch (const fs::filesystem_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
     }
     return 1;
 }
