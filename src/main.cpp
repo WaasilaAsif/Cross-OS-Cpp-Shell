@@ -23,17 +23,24 @@ int lsh_help(vector<string> &args);
 int lsh_exit(vector<string> &args);
 int lsh_cwd(vector<string> &args);
 int lsh_man(vector<string> &args);
+int lsh_tree(vector<string> &args);
+int lsh_tree_all(vector<string> &args);
 string builtin_str[] = {
     "cd",
     "help",
     "exit",
     "cwd",
-    "man"};
+    "man",
+    "tree",
+    "tree_all"};
 int (*builtin_func[])(vector<string> &args) = {
     &lsh_cd,
     &lsh_help,
     &lsh_exit,
-    &lsh_cwd
+    &lsh_cwd,
+    &lsh_man,
+    &lsh_tree,
+    &lsh_tree_all
 
 };
 int lsh_num_builtins()
@@ -239,7 +246,82 @@ int lsh_cwd(vector<string> &args)
     return 1;
 }
 
-int lsh_man(vector<string> *args)
+int lsh_man(vector<string> &args)
 {
+    if (args.size() < 2) {
+        cout << "lsh: man - display info about a builtin command" << endl;
+        cout << "Usage: man <command>" << endl;
+        cout << "Available commands: cd, cwd, exit, help, tree, tree_all" << endl;
+        return 1;
+    }
+
+    string cmd = args[1];
+
+    if (cmd == "cd") {
+        cout << "cd - change the current working directory" << endl;
+        cout << "Usage: cd <directory>" << endl;
+        cout << "       cd ..   (move up one directory)" << endl;
+    }
+    else if (cmd == "cwd") {
+        cout << "cwd - print the current working directory" << endl;
+        cout << "Usage: cwd" << endl;
+    }
+    else if (cmd == "exit") {
+        cout << "exit - terminate the shell" << endl;
+        cout << "Usage: exit" << endl;
+    }
+    else if (cmd == "help") {
+        cout << "help - list all builtin commands" << endl;
+        cout << "Usage: help" << endl;
+    }
+    else if (cmd == "tree") {
+        cout << "tree - recursively list files/directories from current path" << endl;
+        cout << "Usage: tree" << endl;
+    }
+    else if (cmd == "tree_all") {
+        cout << "tree_all display hidden files aling with the regular tree function." << endl;
+        cout << "Usage: tree_all" << endl;
+    }
+    else {
+        cout << "lsh: man: no manual entry for '" << cmd << "'" << endl;
+    }
+
     return 1;
+}
+
+int lsh_tree(vector<string> &args){
+   
+     fs::path current_dir = fs::current_path();
+        cout << "Current working directory: " << current_dir << endl;
+    if (fs::exists(current_dir) && fs::is_directory(current_dir)) {
+        for (const auto& entry : fs::recursive_directory_iterator(current_dir)) {
+           
+            if(entry.path().string().find("\\.")== string::npos) {
+            cout << entry.path().string() << endl;}
+        }
+    }
+    else{
+        cout<<"lsh error: Either your current directory has no files or it is not a valid directory. Please change directory and try again"<<endl;
+    }
+    
+    return 1;
+};
+
+int lsh_tree_all(vector<string> &args){
+    
+     fs::path current_dir = fs::current_path();
+        cout << "Current working directory: " << current_dir << endl;
+    if (fs::exists(current_dir) && fs::is_directory(current_dir)) {
+        for (const auto& entry : fs::recursive_directory_iterator(current_dir)) {
+           
+            cout << entry.path().string() << endl;
+
+        }
+    }
+    else{
+        cout<<"lsh error: Either your current directory has no files or it is not a valid directory. Please change directory and try again"<<endl;
+    }
+    
+    return 1;
+
 }
