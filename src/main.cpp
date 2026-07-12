@@ -144,6 +144,27 @@ int lsh_launch(const vector<string> args)
     }
     return 1;
 #else
+    pid_t pid, wpid;
+  int status;
+
+  pid = fork();
+  if (pid == 0) {
+    // Child process is going on
+    if (execvp(c_args[0], c_args.data()) == -1) {
+      perror("lsh");
+    }
+    exit(EXIT_FAILURE);
+  } else if (pid < 0) {
+    // Error forking
+    perror("lsh");
+  } else {
+    // Parent process
+    do {
+      wpid = waitpid(pid, &status, WUNTRACED);
+    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+  }
+
+  return 1;
 
 #endif
 }
@@ -165,18 +186,31 @@ int lsh_cd(vector<string> &args)
             int pos = path.find_last_of('\\');
             ncwd = path.substr(0, pos);
             cout << "Moving to directory \t" << ncwd << endl;
+        #if defined(_WIN32)
             if (_chdir(ncwd.c_str()) != 0)
             {
                 perror("lsh");
             }
+        #else 
+            if(chdir(ncwd.c_str()) !=0)
+            {
+                perror("lsh");
+            }
+        #endif
         }
         else
         {
             cout << "Moving to directory \t" << args[1] << endl;
+            #if defined(_WIN32)
             if (_chdir(args[1].c_str()) != 0)
             {
                 perror("lsh");
             }
+            #else
+            if (chdir(args[1].c_str()) !=0){
+                perror("lsh");
+            }
+            #endif
         }
     }
     try
