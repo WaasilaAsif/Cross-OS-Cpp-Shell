@@ -9,10 +9,13 @@
 #include <io.h>
 #include <process.h>
 #include <direct.h>
+#include <conio.h> //Stack overflow saya this os to enable escape sequences let's test it out
 #else
 #include <sys/types.h> // Defines pid_t
 #include <unistd.h>    // Defines fork() and execvp()
-#include <sys/wait.h>  // Defines waitpid()
+#include <termios.h>
+#include <sys/wait.h> // Defines waitpid()
+
 #endif
 
 using namespace std;
@@ -25,6 +28,8 @@ int lsh_cwd(vector<string> &args);
 int lsh_man(vector<string> &args);
 int lsh_tree(vector<string> &args);
 int lsh_tree_all(vector<string> &args);
+vector <string> history;
+static int history_index = history.size() - 1;
 string builtin_str[] = {
     "cd",
     "help",
@@ -57,6 +62,30 @@ int main(int argc, char **argv)
 
     return EXIT_SUCCESS;
 }
+#if !defined(_WIN32)
+char getch()
+{
+    char buf = 0;
+    struct termios old = {0};
+    if (tcgetattr(0, &old) < 0)
+        perror("tcsetattr()");
+    old.c_lflag &= ~ICANON; // Disable buffered i/o
+    old.c_lflag &= ~ECHO;   // Disable local echo
+    old.c_cc[VMIN] = 1;
+    old.c_cc[VTIME] = 0;
+    if (tcsetattr(0, TCSANOW, &old) < 0)
+        perror("tcsetattr ICANON");
+    if (read(0, &buf, 1) < 0)
+        perror("read()");
+    old.c_lflag |= ICANON;
+    old.c_lflag |= ECHO;
+    if (tcsetattr(0, TCSANOW, &old) < 0)
+        perror("tcsetattr ~ICANON");
+    return buf;
+}
+
+#endif
+
 void lsh_loop()
 {
     string line;
@@ -67,10 +96,88 @@ void lsh_loop()
     {
         cout << "> ";
         line = lsh_read_line();
+        #if defined(_WIN32)
+
+    while (status)
+    {
+
+        int ch = _getch();
+
+        if (ch == 0 || ch == 224)
+        {
+            int extended_ch = _getch();
+            switch (extended_ch)
+            {
+            case 72: // Up arrow
+                if (history_index > 0)
+                {
+                    history_index--;
+                    line = history[history_index];
+                }
+                break;
+            case 80: // down arrow;
+                ;
+                break;
+            default:
+                cout << "Undefined Key" << endl;
+                break;
+            }
+        }
+        else if (ch == 27)
+        {
+            cout << "Escape key pressed. Exiting...\n";
+            // execute exit work on logic
+            lsh_exit();
+            break;
+        }
+    };
+#else
+    char ch = getch();
+    if (ch != 13 && ch != 10)     
+    {
+
+        char c1 = getch();
+        if (c1 == 27)
+        {
+            char c2 = getch();
+            if (c2 == 91)
+            {
+                char c3 = getch();
+
+                switch (c3)
+                {
+                case 'A':
+                    if (history_index > 0)
+                    {
+                        history_index--;
+                        line = history[history_index];
+                        cout<<line<<endl;
+                    };
+                    break;
+                case 'B':
+                    if (history_index < history.size() - 1)
+                    {
+                        history_index++;
+                        line = history[history_index];
+                        cout<<line<<endl;
+                    };
+
+                    break;
+
+                default:
+                    cout << "Escape key pressed exiting" << endl;
+                    break;
+                }
+            }
+        }
+#endif
+};
+
         args = lsh_split_line(line);
         status = lsh_execute(args);
     } while (status);
-};
+}
+
 string lsh_read_line()
 {
     string line;
@@ -79,7 +186,7 @@ string lsh_read_line()
     {
         if (cin.eof())
         {
-
+            history.push_back(line);
             // return line;
             exit(EXIT_SUCCESS);
         }
@@ -144,27 +251,34 @@ int lsh_launch(const vector<string> args)
     }
     return 1;
 #else
-    pid_t pid, wpid;
-  int status;
+        pid_t pid, wpid;
+        int status;
 
-  pid = fork();
-  if (pid == 0) {
-    // Child process is going on
-    if (execvp(c_args[0], c_args.data()) == -1) {
-      perror("lsh");
-    }
-    exit(EXIT_FAILURE);
-  } else if (pid < 0) {
-    // Error forking
-    perror("lsh");
-  } else {
-    // Parent process
-    do {
-      wpid = waitpid(pid, &status, WUNTRACED);
-    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-  }
+        pid = fork();
+        if (pid == 0)
+        {
+            // Child process is going on
+            if (execvp(c_args[0], c_args.data()) == -1)
+            {
+                perror("lsh");
+            }
+            exit(EXIT_FAILURE);
+        }
+        else if (pid < 0)
+        {
+            // Error forking
+            perror("lsh");
+        }
+        else
+        {
+            // Parent process
+            do
+            {
+                wpid = waitpid(pid, &status, WUNTRACED);
+            } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+        }
 
-  return 1;
+        return 1;
 
 #endif
 }
@@ -186,31 +300,32 @@ int lsh_cd(vector<string> &args)
             int pos = path.find_last_of('\\');
             ncwd = path.substr(0, pos);
             cout << "Moving to directory \t" << ncwd << endl;
-        #if defined(_WIN32)
+#if defined(_WIN32)
             if (_chdir(ncwd.c_str()) != 0)
             {
                 perror("lsh");
             }
-        #else 
-            if(chdir(ncwd.c_str()) !=0)
-            {
-                perror("lsh");
-            }
-        #endif
+#else
+                if (chdir(ncwd.c_str()) != 0)
+                {
+                    perror("lsh");
+                }
+#endif
         }
         else
         {
             cout << "Moving to directory \t" << args[1] << endl;
-            #if defined(_WIN32)
+#if defined(_WIN32)
             if (_chdir(args[1].c_str()) != 0)
             {
                 perror("lsh");
             }
-            #else
-            if (chdir(args[1].c_str()) !=0){
-                perror("lsh");
-            }
-            #endif
+#else
+                if (chdir(args[1].c_str()) != 0)
+                {
+                    perror("lsh");
+                }
+#endif
         }
     }
     try
@@ -282,7 +397,8 @@ int lsh_cwd(vector<string> &args)
 
 int lsh_man(vector<string> &args)
 {
-    if (args.size() < 2) {
+    if (args.size() < 2)
+    {
         cout << "lsh: man - display info about a builtin command" << endl;
         cout << "Usage: man <command>" << endl;
         cout << "Available commands: cd, cwd, exit, help, tree, tree_all" << endl;
@@ -291,71 +407,86 @@ int lsh_man(vector<string> &args)
 
     string cmd = args[1];
 
-    if (cmd == "cd") {
+    if (cmd == "cd")
+    {
         cout << "cd - change the current working directory" << endl;
         cout << "Usage: cd <directory>" << endl;
         cout << "       cd ..   (move up one directory)" << endl;
     }
-    else if (cmd == "cwd") {
+    else if (cmd == "cwd")
+    {
         cout << "cwd - print the current working directory" << endl;
         cout << "Usage: cwd" << endl;
     }
-    else if (cmd == "exit") {
+    else if (cmd == "exit")
+    {
         cout << "exit - terminate the shell" << endl;
         cout << "Usage: exit" << endl;
     }
-    else if (cmd == "help") {
+    else if (cmd == "help")
+    {
         cout << "help - list all builtin commands" << endl;
         cout << "Usage: help" << endl;
     }
-    else if (cmd == "tree") {
+    else if (cmd == "tree")
+    {
         cout << "tree - recursively list files/directories from current path" << endl;
         cout << "Usage: tree" << endl;
     }
-    else if (cmd == "tree_all") {
+    else if (cmd == "tree_all")
+    {
         cout << "tree_all display hidden files aling with the regular tree function." << endl;
         cout << "Usage: tree_all" << endl;
     }
-    else {
+    else
+    {
         cout << "lsh: man: no manual entry for '" << cmd << "'" << endl;
     }
 
     return 1;
 }
 
-int lsh_tree(vector<string> &args){
-   
-     fs::path current_dir = fs::current_path();
-        cout << "Current working directory: " << current_dir << endl;
-    if (fs::exists(current_dir) && fs::is_directory(current_dir)) {
-        for (const auto& entry : fs::recursive_directory_iterator(current_dir)) {
-           
-            if(entry.path().string().find("\\.")== string::npos) {
-            cout << entry.path().string() << endl;}
+int lsh_tree(vector<string> &args)
+{
+
+    fs::path current_dir = fs::current_path();
+    cout << "Current working directory: " << current_dir << endl;
+    if (fs::exists(current_dir) && fs::is_directory(current_dir))
+    {
+        for (const auto &entry : fs::recursive_directory_iterator(current_dir))
+        {
+
+            if (entry.path().string().find("\\.") == string::npos)
+            {
+                cout << entry.path().string() << endl;
+            }
         }
     }
-    else{
-        cout<<"lsh error: Either your current directory has no files or it is not a valid directory. Please change directory and try again"<<endl;
+    else
+    {
+        cout << "lsh error: Either your current directory has no files or it is not a valid directory. Please change directory and try again" << endl;
     }
-    
+
     return 1;
 };
 
-int lsh_tree_all(vector<string> &args){
-    
-     fs::path current_dir = fs::current_path();
-        cout << "Current working directory: " << current_dir << endl;
-    if (fs::exists(current_dir) && fs::is_directory(current_dir)) {
-        for (const auto& entry : fs::recursive_directory_iterator(current_dir)) {
-           
-            cout << entry.path().string() << endl;
+int lsh_tree_all(vector<string> &args)
+{
 
+    fs::path current_dir = fs::current_path();
+    cout << "Current working directory: " << current_dir << endl;
+    if (fs::exists(current_dir) && fs::is_directory(current_dir))
+    {
+        for (const auto &entry : fs::recursive_directory_iterator(current_dir))
+        {
+
+            cout << entry.path().string() << endl;
         }
     }
-    else{
-        cout<<"lsh error: Either your current directory has no files or it is not a valid directory. Please change directory and try again"<<endl;
+    else
+    {
+        cout << "lsh error: Either your current directory has no files or it is not a valid directory. Please change directory and try again" << endl;
     }
-    
-    return 1;
 
+    return 1;
 }
