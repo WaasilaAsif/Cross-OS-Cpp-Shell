@@ -50,7 +50,7 @@ int lsh_num_builtins()
 string lsh_read_line();
 vector<string> lsh_split_line(string line);
 int lsh_execute(vector<string> args);
-int main(int argc, char **argv)
+int main()
 {
 
     lsh_loop();

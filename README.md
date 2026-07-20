@@ -107,7 +107,7 @@ Requires a C++17-capable compiler (`<filesystem>` is used for `tree`/`cwd`).
 - [x] `cd ..` support
 - [x] `tree` / `tree_all`
 - [x] Windows process launch via `_spawnvp`
-- [ ] Native Unix process launch via `fork`/`execvp`/`waitpid`
+- [x] Native Unix process launch via `fork`/`execvp`/`waitpid`
 - [ ] Signal handling (Ctrl+C shouldn't kill the shell itself)
 - [ ] I/O redirection (`>`, `<`)
 - [ ] Pipes (`|`)
