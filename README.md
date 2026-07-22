@@ -78,7 +78,7 @@ _spawnvp(_P_WAIT, ...)   → CreateProcess() under the hood: builds a brand-new
 
 There's no Windows equivalent to the fork-then-exec split — `_spawnvp` fuses process creation, program loading, and waiting into a single call, because Windows never exposed a "duplicate my own running process" primitive the way Unix's copy-on-write `fork()` does.
 
-<!-- PIC: a simple diagram of the fork/exec vs _spawnvp flow — nice place for a hand-drawn or draw.io style image -->
+
 
 ---
 
@@ -127,7 +127,7 @@ As the famous quote goes
 
 ## Acknowledgements
 
-Built on the shoulders of [Stephen Brennan's "Write a Shell in C"](https://brennan.io/2015/01/16/write-a-shell-in-c/) — the canonical starting point for this exact project, extended here into a cross-platform, C++ rewrite with additional builtins and a from-scratch Windows process-launch path.
+Built on the shoulders of [Stephen Brennan's "Write a Shell in C"](https://brennan.io/2015/01/16/write-a-shell-in-c/) — the canonical starting point for this exact project, extended here into a cross-platform, C++ rewrite with additional builtins and a from-scratch Windows process-launch path. Working on creating more features and learning more everyday.
 
 <div align="center">
 
