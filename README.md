@@ -15,7 +15,7 @@
 
 ---
 
-## What this is
+## What this is?
 
 `lsh` is a shell — the thing that reads a command, runs it, and gives you a prompt back — built to actually understand what a shell is doing underneath, not just to have one working. It's inspired by [Stephen Brennan's classic "Write a Shell in C"](https://brennan.io/2015/01/16/write-a-shell-in-c/), rebuilt in C++, and extended past the tutorial in a specific way: **it runs natively on both Windows and Linux, using each OS's own process-creation model** rather than papering over the difference with a compatibility layer.
 
